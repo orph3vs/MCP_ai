@@ -63,6 +63,8 @@ def dispatch_http_payload(server: McpServer, payload: Any) -> Optional[Any]:
                 response = server.handle_message(message)
             except McpProtocolError as exc:
                 response = McpServer._jsonrpc_error(request_id, exc.code, exc.message, exc.data)
+            except Exception as exc:  # noqa: BLE001
+                response = McpServer._jsonrpc_error(request_id, -32603, "Internal error", {"detail": str(exc)})
             if response is not None:
                 responses.append(response)
         return responses or None
@@ -72,6 +74,8 @@ def dispatch_http_payload(server: McpServer, payload: Any) -> Optional[Any]:
         return server.handle_message(payload)
     except McpProtocolError as exc:
         return McpServer._jsonrpc_error(request_id, exc.code, exc.message, exc.data)
+    except Exception as exc:  # noqa: BLE001
+        return McpServer._jsonrpc_error(request_id, -32603, "Internal error", {"detail": str(exc)})
 
 
 def get_expected_bearer_token() -> Optional[str]:

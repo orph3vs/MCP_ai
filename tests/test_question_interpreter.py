@@ -37,6 +37,39 @@ class QuestionInterpreterTests(unittest.TestCase):
         self.assertEqual(result.routing_source, "rules_fallback")
         self.assertEqual(result.candidate_direct_basis_articles[0].article_no, "제15조")
 
+    def test_transport_error_is_kept_in_diagnostics(self):
+        def transport(_endpoint, _payload, _timeout):
+            raise RuntimeError("ollama_http_error status=500 detail=model requires more system memory")
+
+        interpreter = QuestionInterpreter(OllamaClient(transport=transport))
+        result = interpreter.interpret(PipelineRequest(user_query="개인정보 수집 조문이 뭐야?"))
+
+        self.assertEqual(result.routing_source, "rules_fallback")
+        self.assertIn("more system memory", result.diagnostics[0])
+
+    def test_generic_use_query_without_privacy_context_does_not_map_to_privacy_basis(self):
+        def transport(_endpoint, _payload, _timeout):
+            raise RuntimeError("forced fallback")
+
+        interpreter = QuestionInterpreter(OllamaClient(transport=transport))
+        result = interpreter.interpret(PipelineRequest(user_query="서비스 이용약관은 어디서 봐?"))
+
+        self.assertEqual(result.routing_source, "rules_fallback")
+        self.assertEqual(result.candidate_law_families, [])
+        self.assertEqual(result.privacy_categories, [])
+        self.assertEqual(result.candidate_direct_basis_articles, [])
+
+    def test_service_withdrawal_query_does_not_trigger_privacy_rights(self):
+        def transport(_endpoint, _payload, _timeout):
+            raise RuntimeError("forced fallback")
+
+        interpreter = QuestionInterpreter(OllamaClient(transport=transport))
+        result = interpreter.interpret(PipelineRequest(user_query="서비스 탈퇴 방법이 뭐야?"))
+
+        self.assertEqual(result.routing_source, "rules_fallback")
+        self.assertEqual(result.candidate_law_families, [])
+        self.assertEqual(result.privacy_categories, [])
+
 
 if __name__ == "__main__":
     unittest.main()

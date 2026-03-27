@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from next_mcp.src.law_gateway import LawGateway
+from src.law_gateway import LawGateway
 
 
 class FakeLawSearchApi:

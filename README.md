@@ -1,6 +1,6 @@
 # next_mcp
 
-독립 실행형 MCP 서버 재설계 프로젝트다. 기존 v1 런타임에 의존하지 않고, 질문 해석은 Ollama(`qwen3.5:9b` 기본값)로 수행하며 direct basis 확정은 deterministic policy와 실제 법령 검증으로 처리한다.
+독립 실행형 MCP 서버 재설계 프로젝트다. 기존 v1 런타임에 의존하지 않고, 질문 해석은 Ollama(`qwen3.5:4b` 기본값)로 수행하며 direct basis 확정은 deterministic policy와 실제 법령 검증으로 처리한다.
 
 ## 핵심 구조
 
@@ -16,7 +16,7 @@
 ## 기본 설정
 
 - Ollama endpoint: `http://127.0.0.1:11434`
-- Ollama model: `qwen3.5:9b`
+- Ollama model: `qwen3.5:4b` (더 큰 모델을 쓰려면 `OLLAMA_MODEL` 환경변수로 override)
 - 법령 API: `NLIC_OC` 환경변수 필요
 
 ## 엔트리포인트

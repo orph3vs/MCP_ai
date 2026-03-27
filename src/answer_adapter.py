@@ -46,8 +46,9 @@ class AnswerAdapter:
         )
 
     def _build_answer(self, retrieval: RetrievalResult) -> str:
+        prefix_lines = self._clarification_notice_lines(retrieval)
         if retrieval.interpretation.query_mode == "framework_overview":
-            lines = ["[결론]", "질문은 관련 법 체계를 함께 보는 유형입니다."]
+            lines = prefix_lines + ["[결론]", "질문은 관련 법 체계를 함께 보는 유형입니다."]
             if retrieval.framework_axes:
                 lines.extend(["", "[핵심 축]"])
                 for axis in retrieval.framework_axes:
@@ -59,15 +60,19 @@ class AnswerAdapter:
         if retrieval.primary_law and retrieval.article:
             article_no = retrieval.article.get("article_no")
             article_title = self._extract_article_title(_clean(retrieval.article.get("article_text")))
-            lines = [
+            lines = prefix_lines + [
                 "[결론]",
                 f"{retrieval.primary_law.law_name} {article_no}가 직접 관련 조문입니다.",
-                "",
-                "[조문]",
-                _clean(retrieval.article.get("article_text")),
             ]
             if article_title:
-                lines.insert(2, f"조문 제목: {article_title}")
+                lines.append(f"조문 제목: {article_title}")
+            lines.extend(
+                [
+                    "",
+                    "[조문]",
+                    _clean(retrieval.article.get("article_text")),
+                ]
+            )
             if retrieval.related_articles:
                 lines.extend(["", "[관련 조문]"])
                 for related in retrieval.related_articles:
@@ -83,7 +88,8 @@ class AnswerAdapter:
             )
             return "\n".join(lines)
 
-        return "[결론]\n직접 관련 조문을 특정하지 못했습니다. 관련 법령군을 다시 확인해야 합니다."
+        lines = prefix_lines + ["[결론]", "직접 관련 조문을 특정하지 못했습니다. 관련 법령군을 다시 확인해야 합니다."]
+        return "\n".join(lines)
 
     def _build_citations(self, retrieval: RetrievalResult) -> Dict[str, Any]:
         primary_law = None
@@ -203,3 +209,16 @@ class AnswerAdapter:
             if related_no:
                 checkpoints.append(f"{law_name} {related_no}")
         return checkpoints
+
+    @staticmethod
+    def _clarification_notice_lines(retrieval: RetrievalResult) -> List[str]:
+        if not retrieval.interpretation.needs_clarification:
+            return []
+        lines = [
+            "[주의]",
+            "사실관계 확인이 더 필요합니다. 아래 내용은 잠정적 검토 기준입니다.",
+        ]
+        for point in retrieval.interpretation.clarification_points[:3]:
+            lines.append(f"- 추가 확인: {_clean(point)}")
+        lines.append("")
+        return lines

@@ -46,6 +46,7 @@ def serve_forever(server: Optional[McpServer] = None) -> None:
     app = server or McpServer()
     _log("server_start")
     while True:
+        message: Optional[Dict[str, Any]] = None
         try:
             message = _read_message(sys.stdin.buffer)
             if message is None:
@@ -57,6 +58,13 @@ def serve_forever(server: Optional[McpServer] = None) -> None:
         except McpProtocolError as exc:
             _log(f"protocol_error code={exc.code} message={exc.message}")
             _write_message(sys.stdout.buffer, McpServer._jsonrpc_error(None, exc.code, exc.message, exc.data))
+        except Exception as exc:  # noqa: BLE001
+            request_id = message.get("id") if isinstance(message, dict) else None
+            _log(f"internal_error detail={exc}")
+            _write_message(
+                sys.stdout.buffer,
+                McpServer._jsonrpc_error(request_id, -32603, "Internal error", {"detail": str(exc)}),
+            )
         except KeyboardInterrupt:
             _log("server_keyboard_interrupt")
             return

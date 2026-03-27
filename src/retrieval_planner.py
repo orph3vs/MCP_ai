@@ -90,7 +90,9 @@ class RetrievalPlanner:
         resolved_cache: Dict[str, ResolvedLaw],
     ) -> Optional[Dict[str, object]]:
         for candidate in interpretation.candidate_direct_basis_articles:
-            law = resolved_cache.get(candidate.law_family) or primary_law
+            law = resolved_cache.get(candidate.law_family)
+            if law is None and not candidate.law_family:
+                law = primary_law
             if law is None:
                 continue
             article = self.law_gateway.get_article(law, candidate.article_no)

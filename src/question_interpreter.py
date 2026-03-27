@@ -33,6 +33,33 @@ def _has_incident_loss_terms(query: str) -> bool:
     return any(token in query for token in direct_terms) or any(token in query for token in deletion_incident_terms)
 
 
+def _has_privacy_context(query: str) -> bool:
+    privacy_tokens = ("개인정보", "개보법", "개인정보보호법", "주민등록번호", "민감정보", "고유식별정보", "영상정보", "정보주체")
+    lowered = query.lower()
+    return any(token in query for token in privacy_tokens) or "cctv" in lowered
+
+
+def _is_privacy_processing_query(query: str) -> bool:
+    processing_tokens = (
+        "수집",
+        "이용",
+        "수집·이용",
+        "수집 이용",
+        "제3자 제공",
+        "제3자제공",
+        "위탁",
+        "처리위탁",
+        "열람",
+        "정정",
+        "삭제",
+        "처리정지",
+        "보유기간",
+        "보존기간",
+        "파기",
+    )
+    return _has_privacy_context(query) and any(token in query for token in processing_tokens)
+
+
 class QuestionInterpreter:
     def __init__(self, ollama_client: Optional[OllamaClient] = None) -> None:
         self.ollama_client = ollama_client or OllamaClient()
@@ -162,15 +189,17 @@ class QuestionInterpreter:
             issues.append("보존파기")
         if any(token in query for token in ("수집", "수집·이용", "수집 이용")):
             issues.append("수집이용")
-        if any(token in query for token in ("제3자 제공", "제공")):
+        if any(token in query for token in ("제3자 제공", "제3자제공", "외부 제공", "공유", "넘겨")):
             issues.append("제3자제공")
         if any(token in query for token in ("위탁", "수탁", "처리위탁")):
             issues.append("위탁")
         return issues
 
     def _extract_privacy_categories(self, query: str) -> List[str]:
+        if not _has_privacy_context(query):
+            return []
         categories: List[str] = []
-        if any(token in query for token in ("수집", "이용", "제공", "위탁", "처리할 수")):
+        if _is_privacy_processing_query(query):
             categories.append("처리 근거")
         if any(token in query for token in ("열람", "정정", "삭제", "처리정지", "철회", "탈퇴")):
             categories.append("정보주체 권리")
@@ -233,6 +262,6 @@ class QuestionInterpreter:
             results.append(DirectBasisCandidate(privacy_law, "제25조", "rules fallback"))
         elif "광고성정보전송" in issue_terms:
             results.append(DirectBasisCandidate(network_law, "제50조", "rules fallback"))
-        elif any(token in query for token in ("개인정보", "수집", "이용")) and privacy_law in candidate_laws:
+        elif _is_privacy_processing_query(query) and privacy_law in candidate_laws:
             results.append(DirectBasisCandidate(privacy_law, "제15조", "rules fallback"))
         return results

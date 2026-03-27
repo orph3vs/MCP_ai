@@ -224,19 +224,22 @@ class McpServer:
             user_query = arguments.get("user_query")
             if not isinstance(user_query, str) or not user_query.strip():
                 return self._tool_error("missing_user_query")
-            response = self.pipeline.process(
-                PipelineRequest(
-                    user_query=user_query,
-                    context=arguments.get("context"),
-                    request_id=arguments.get("request_id"),
+            return self._safe_tool_call(
+                lambda: self._tool_result_from_pipeline(
+                    self.pipeline.process(
+                        PipelineRequest(
+                            user_query=user_query,
+                            context=arguments.get("context"),
+                            request_id=arguments.get("request_id"),
+                        )
+                    )
                 )
             )
-            return self._tool_result_from_pipeline(response)
         if name == "search_law":
             query = arguments.get("query")
             if not isinstance(query, str) or not query.strip():
                 return self._tool_error("missing_query")
-            return self._raw_tool_success(self.pipeline.law_gateway.search_law_raw(query))
+            return self._safe_tool_call(lambda: self._raw_tool_success(self.pipeline.law_gateway.search_law_raw(query)))
         if name == "get_article":
             law_id = arguments.get("law_id")
             article_no = arguments.get("article_no")
@@ -244,12 +247,14 @@ class McpServer:
                 return self._tool_error("missing_law_id")
             if not article_no:
                 return self._tool_error("missing_article_no")
-            return self._raw_tool_success(self.pipeline.law_gateway.get_article_raw(str(law_id), str(article_no)))
+            return self._safe_tool_call(
+                lambda: self._raw_tool_success(self.pipeline.law_gateway.get_article_raw(str(law_id), str(article_no)))
+            )
         if name == "get_version":
             law_id = arguments.get("law_id")
             if not law_id:
                 return self._tool_error("missing_law_id")
-            return self._raw_tool_success(self.pipeline.law_gateway.get_version_raw(str(law_id)))
+            return self._safe_tool_call(lambda: self._raw_tool_success(self.pipeline.law_gateway.get_version_raw(str(law_id))))
         if name == "validate_article":
             law_id = arguments.get("law_id")
             article_no = arguments.get("article_no")
@@ -257,18 +262,31 @@ class McpServer:
                 return self._tool_error("missing_law_id")
             if not article_no:
                 return self._tool_error("missing_article_no")
-            return self._raw_tool_success(self.pipeline.law_gateway.validate_article_raw(str(law_id), str(article_no)))
+            return self._safe_tool_call(
+                lambda: self._raw_tool_success(self.pipeline.law_gateway.validate_article_raw(str(law_id), str(article_no)))
+            )
         if name == "search_precedent":
             query = arguments.get("query")
             if not isinstance(query, str) or not query.strip():
                 return self._tool_error("missing_query")
-            return self._raw_tool_success(self.pipeline.law_gateway.search_precedent_raw(query))
+            return self._safe_tool_call(
+                lambda: self._raw_tool_success(self.pipeline.law_gateway.search_precedent_raw(query))
+            )
         if name == "get_precedent":
             precedent_id = arguments.get("precedent_id")
             if not precedent_id:
                 return self._tool_error("missing_precedent_id")
-            return self._raw_tool_success(self.pipeline.law_gateway.get_precedent_raw(str(precedent_id)))
+            return self._safe_tool_call(
+                lambda: self._raw_tool_success(self.pipeline.law_gateway.get_precedent_raw(str(precedent_id)))
+            )
         return self._tool_error("unknown_tool")
+
+    def _safe_tool_call(self, runner) -> Dict[str, Any]:
+        try:
+            return runner()
+        except Exception as exc:  # noqa: BLE001
+            _log(f"tool_call_error detail={exc}")
+            return self._tool_error("backend_error", detail=str(exc))
 
     def _tool_result_from_pipeline(self, response) -> Dict[str, Any]:
         payload = asdict(response)
@@ -296,8 +314,10 @@ class McpServer:
         }
 
     @staticmethod
-    def _tool_error(code: str) -> Dict[str, Any]:
-        payload = {"error": code}
+    def _tool_error(code: str, detail: Optional[str] = None) -> Dict[str, Any]:
+        payload: Dict[str, Any] = {"error": code}
+        if detail:
+            payload["detail"] = detail
         return {
             "content": [{"type": "text", "text": json.dumps(payload, ensure_ascii=False)}],
             "structuredContent": payload,

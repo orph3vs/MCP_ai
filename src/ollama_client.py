@@ -3,11 +3,12 @@ from __future__ import annotations
 import json
 import os
 from typing import Any, Callable, Dict, Optional
+from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 
 DEFAULT_OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434").rstrip("/")
-DEFAULT_OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3.5:9b")
+DEFAULT_OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3.5:4b")
 
 
 class OllamaClient:
@@ -42,8 +43,12 @@ class OllamaClient:
                 headers={"Content-Type": "application/json; charset=utf-8"},
                 method="POST",
             )
-            with urlopen(request, timeout=self.timeout_seconds) as response:  # nosec B310
-                raw = json.loads(response.read().decode("utf-8"))
+            try:
+                with urlopen(request, timeout=self.timeout_seconds) as response:  # nosec B310
+                    raw = json.loads(response.read().decode("utf-8"))
+            except HTTPError as exc:
+                detail = self._http_error_detail(exc)
+                raise RuntimeError(f"ollama_http_error status={exc.code} detail={detail}") from exc
 
         if isinstance(raw, dict) and "response" in raw:
             response_payload = raw.get("response")
@@ -54,3 +59,19 @@ class OllamaClient:
         if isinstance(raw, dict):
             return raw
         raise ValueError("unexpected ollama response payload")
+
+    @staticmethod
+    def _http_error_detail(exc: HTTPError) -> str:
+        try:
+            body = exc.read().decode("utf-8", errors="replace")
+        except Exception:  # noqa: BLE001
+            body = ""
+        if not body:
+            return str(exc)
+        try:
+            payload = json.loads(body)
+        except json.JSONDecodeError:
+            return body
+        if isinstance(payload, dict):
+            return str(payload.get("error") or payload)
+        return str(payload)

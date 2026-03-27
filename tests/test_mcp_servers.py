@@ -47,6 +47,28 @@ class FakePipeline:
         )
 
 
+class ExplodingLawGateway(FakeLawGateway):
+    def search_law_raw(self, query):
+        raise RuntimeError(f"backend exploded: {query}")
+
+
+class HelperPipeline:
+    def __init__(self, law_gateway):
+        self.law_gateway = law_gateway
+
+    def process(self, req):
+        return PipelineResponse(
+            request_id=req.request_id or "req-1",
+            risk_level="LOW",
+            mode="single_agent",
+            answer="테스트 응답",
+            citations={},
+            score=90.0,
+            latency_ms=1.0,
+            error=None,
+        )
+
+
 class McpServerContractTests(unittest.TestCase):
     def setUp(self):
         self.server = McpServer(pipeline=FakePipeline())
@@ -105,10 +127,74 @@ class McpServerContractTests(unittest.TestCase):
         roundtrip = _read_message(buffer)
         self.assertEqual(roundtrip["method"], "ping")
 
+    def test_cp949_http_body_is_decoded(self):
+        payload = parse_jsonrpc_http_body(json.dumps({"jsonrpc": "2.0", "id": 1, "method": "tools/list"}).encode("cp949"))
+        self.assertEqual(payload["method"], "tools/list")
+
+    def test_stdio_content_length_frame_is_parsed(self):
+        body = json.dumps({"jsonrpc": "2.0", "id": 5, "method": "tools/list"}, ensure_ascii=False).encode("utf-8")
+        buffer = io.BytesIO(f"Content-Length: {len(body)}\r\n\r\n".encode("utf-8") + body)
+
+        message = _read_message(buffer)
+
+        self.assertEqual(message["id"], 5)
+        self.assertEqual(message["method"], "tools/list")
+
     def test_auth_helper(self):
         self.assertTrue(is_authorized_request({}))
         self.assertTrue(is_authorized_request({"Authorization": "Bearer token"}, expected_token="token"))
         self.assertFalse(is_authorized_request({"Authorization": "Bearer wrong"}, expected_token="token"))
+
+    def test_initialize_required_before_tools_list(self):
+        response = dispatch_http_payload(self.server, {"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}})
+        self.assertEqual(response["error"]["code"], -32002)
+
+    def test_unknown_tool_returns_tool_error_payload(self):
+        self._initialize()
+        result = self.server.handle_message(
+            {
+                "jsonrpc": "2.0",
+                "id": 3,
+                "method": "tools/call",
+                "params": {"name": "not_a_real_tool", "arguments": {}},
+            }
+        )
+        self.assertTrue(result["result"]["isError"])
+        self.assertEqual(result["result"]["structuredContent"]["error"], "unknown_tool")
+
+    def test_raw_helper_exception_is_isolated_as_tool_error(self):
+        server = McpServer(pipeline=HelperPipeline(ExplodingLawGateway()))
+        server.handle_message(
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "initialize",
+                "params": {"protocolVersion": "2025-03-26", "capabilities": {}, "clientInfo": {"name": "test", "version": "1.0"}},
+            }
+        )
+
+        result = server.handle_message(
+            {
+                "jsonrpc": "2.0",
+                "id": 2,
+                "method": "tools/call",
+                "params": {"name": "search_law", "arguments": {"query": "개인정보 보호법"}},
+            }
+        )
+
+        self.assertTrue(result["result"]["isError"])
+        self.assertEqual(result["result"]["structuredContent"]["error"], "backend_error")
+        self.assertIn("backend exploded", result["result"]["structuredContent"]["detail"])
+
+    def test_http_dispatch_converts_unexpected_exception_to_internal_error(self):
+        class BrokenServer:
+            def handle_message(self, _message):
+                raise RuntimeError("unexpected failure")
+
+        response = dispatch_http_payload(BrokenServer(), {"jsonrpc": "2.0", "id": 7, "method": "tools/list", "params": {}})
+
+        self.assertEqual(response["error"]["code"], -32603)
+        self.assertIn("unexpected failure", response["error"]["data"]["detail"])
 
 
 if __name__ == "__main__":
