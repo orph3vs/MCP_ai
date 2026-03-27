@@ -1,0 +1,242 @@
+[
+  {
+    "id": "privacy_collect_use_general",
+    "label": "개인정보 수집/이용",
+    "scope": {
+      "law_families": ["개인정보 보호법"],
+      "query_modes": ["single_basis"]
+    },
+    "match": {
+      "all": ["개인정보"],
+      "any": ["수집", "이용", "수집·이용", "수집 이용", "개인정보 수집"],
+      "none": ["제3자 제공", "위탁"]
+    },
+    "direct_basis": ["제15조"],
+    "related_basis": ["제22조"],
+    "negative_article_markers": ["단체소송", "집단분쟁조정", "실태점검", "안전성 확보 조치", "개인정보 영향평가"]
+  },
+  {
+    "id": "privacy_third_party_provision",
+    "label": "개인정보 제3자 제공",
+    "scope": {
+      "law_families": ["개인정보 보호법"],
+      "query_modes": ["single_basis"]
+    },
+    "match": {
+      "all": [],
+      "any": ["제3자 제공", "제3자제공", "제공", "외부 제공", "넘겨", "공유"],
+      "none": ["위탁", "처리위탁"]
+    },
+    "direct_basis": ["제17조"],
+    "related_basis": ["제18조", "제22조"],
+    "negative_article_markers": ["단체소송", "집단분쟁조정", "실태점검"]
+  },
+  {
+    "id": "privacy_entrustment",
+    "label": "개인정보 처리위탁",
+    "scope": {
+      "law_families": ["개인정보 보호법"],
+      "query_modes": ["single_basis"]
+    },
+    "match": {
+      "all": [],
+      "any": ["위탁", "수탁", "처리위탁", "업무위탁", "외부 업체에 맡기", "대행"],
+      "none": ["제3자 제공", "목적 외"]
+    },
+    "direct_basis": ["제26조"],
+    "related_basis": ["제15조", "제22조"],
+    "negative_article_markers": ["단체소송", "집단분쟁조정", "실태점검"]
+  },
+  {
+    "id": "privacy_purpose_outside_use",
+    "label": "목적 외 이용/제공",
+    "scope": {
+      "law_families": ["개인정보 보호법"],
+      "query_modes": ["single_basis"]
+    },
+    "match": {
+      "all": [],
+      "any": ["목적 외", "다른 목적으로", "추가 이용", "추가 제공"],
+      "none": []
+    },
+    "direct_basis": ["제18조"],
+    "related_basis": ["제15조", "제17조"],
+    "negative_article_markers": ["단체소송", "집단분쟁조정"]
+  },
+  {
+    "id": "privacy_sensitive_info",
+    "label": "민감정보",
+    "scope": {
+      "law_families": ["개인정보 보호법"],
+      "query_modes": ["single_basis"]
+    },
+    "match": {
+      "all": ["민감정보"],
+      "any": ["처리", "수집", "이용", "가능", "동의"],
+      "none": []
+    },
+    "direct_basis": ["제23조"],
+    "related_basis": ["제15조", "제22조"],
+    "negative_article_markers": ["단체소송", "실태점검", "개인정보 영향평가"]
+  },
+  {
+    "id": "privacy_identifier_info",
+    "label": "고유식별정보",
+    "scope": {
+      "law_families": ["개인정보 보호법"],
+      "query_modes": ["single_basis"]
+    },
+    "match": {
+      "all": ["고유식별정보"],
+      "any": ["처리", "수집", "이용", "가능", "동의"],
+      "none": ["주민등록번호"]
+    },
+    "direct_basis": ["제24조"],
+    "related_basis": ["제15조", "제22조"],
+    "negative_article_markers": ["단체소송", "개인정보 영향평가"]
+  },
+  {
+    "id": "privacy_rrn",
+    "label": "주민등록번호",
+    "scope": {
+      "law_families": ["개인정보 보호법"],
+      "query_modes": ["single_basis"]
+    },
+    "match": {
+      "all": ["주민등록번호"],
+      "any": ["처리", "수집", "이용", "가능", "동의"],
+      "none": []
+    },
+    "direct_basis": ["제24조의2"],
+    "related_basis": ["제15조"],
+    "negative_article_markers": ["단체소송", "개인정보 영향평가"]
+  },
+  {
+    "id": "privacy_retention_destruction",
+    "label": "보유기간 경과 후 파기",
+    "scope": {
+      "law_families": ["개인정보 보호법"],
+      "query_modes": ["single_basis"]
+    },
+    "match": {
+      "all": [],
+      "any": ["파기", "보유기간", "보존기간", "분리보관", "지체 없이", "지체없이"],
+      "none": []
+    },
+    "direct_basis": ["제21조"],
+    "related_basis": [],
+    "negative_article_markers": ["단체소송", "개인정보 영향평가"]
+  },
+  {
+    "id": "privacy_collection_source_notice",
+    "label": "수집 출처 등 고지",
+    "scope": {
+      "law_families": ["개인정보 보호법"],
+      "query_modes": ["single_basis"]
+    },
+    "match": {
+      "all": [],
+      "any": ["출처", "어디서 받", "제3자로부터 수집", "정보주체 이외로부터", "수집 출처 고지"],
+      "none": []
+    },
+    "direct_basis": ["제20조"],
+    "related_basis": ["제15조", "제17조"],
+    "negative_article_markers": ["단체소송", "실태점검"]
+  },
+  {
+    "id": "privacy_security_measures",
+    "label": "안전조치의무",
+    "scope": {
+      "law_families": ["개인정보 보호법"],
+      "query_modes": ["single_basis"]
+    },
+    "match": {
+      "all": [],
+      "any": ["안전조치", "안전성 확보", "보안조치", "접근통제", "암호화"],
+      "none": ["유출 통지", "신고"]
+    },
+    "direct_basis": ["제29조"],
+    "related_basis": ["제34조"],
+    "negative_article_markers": ["단체소송", "실태점검", "영향평가"]
+  },
+  {
+    "id": "privacy_video_device_operation",
+    "label": "고정형 영상정보처리기기",
+    "scope": {
+      "law_families": ["개인정보 보호법"],
+      "query_modes": ["single_basis"]
+    },
+    "match": {
+      "all": [],
+      "any": ["cctv", "영상정보", "영상정보처리기기", "고정형", "공개된 장소"],
+      "none": ["통지", "신고", "유출", "분실", "도난", "소실", "삭제"]
+    },
+    "direct_basis": ["제25조"],
+    "related_basis": ["제58조", "제34조"],
+    "negative_article_markers": ["단체소송", "실태점검", "영향평가"]
+  },
+  {
+    "id": "privacy_breach_notification",
+    "label": "유출 통지/신고",
+    "scope": {
+      "law_families": ["개인정보 보호법"],
+      "query_modes": ["single_basis"]
+    },
+    "match": {
+      "all": [],
+      "any": ["유출", "분실", "도난", "통지", "신고", "72시간"],
+      "none": ["cctv", "영상정보", "영상정보처리기기", "고정형", "공개된 장소"]
+    },
+    "direct_basis": ["제34조"],
+    "related_basis": [],
+    "negative_article_markers": ["단체소송", "개인정보 영향평가"]
+  },
+  {
+    "id": "privacy_access_request",
+    "label": "개인정보 열람",
+    "scope": {
+      "law_families": ["개인정보 보호법"],
+      "query_modes": ["single_basis"]
+    },
+    "match": {
+      "all": [],
+      "any": ["열람", "열람청구", "조회", "보여줘", "내 정보 확인"],
+      "none": ["정정", "삭제", "처리정지"]
+    },
+    "direct_basis": ["제35조"],
+    "related_basis": ["제36조", "제37조"],
+    "negative_article_markers": ["단체소송", "실태점검", "영향평가"]
+  },
+  {
+    "id": "privacy_rectification_deletion",
+    "label": "정정·삭제",
+    "scope": {
+      "law_families": ["개인정보 보호법"],
+      "query_modes": ["single_basis"]
+    },
+    "match": {
+      "all": [],
+      "any": ["정정", "수정", "삭제요구", "삭제 요구", "삭제해", "지워달", "삭제 요청"],
+      "none": ["열람", "처리정지", "cctv", "영상정보", "통지", "신고", "유출", "분실", "도난", "소실"]
+    },
+    "direct_basis": ["제36조"],
+    "related_basis": ["제35조", "제37조"],
+    "negative_article_markers": ["단체소송", "실태점검", "영향평가"]
+  },
+  {
+    "id": "privacy_processing_suspension",
+    "label": "처리정지",
+    "scope": {
+      "law_families": ["개인정보 보호법"],
+      "query_modes": ["single_basis"]
+    },
+    "match": {
+      "all": [],
+      "any": ["처리정지", "이용중지", "중지", "그만 처리", "마케팅 중지"],
+      "none": ["열람", "정정", "삭제"]
+    },
+    "direct_basis": ["제37조"],
+    "related_basis": ["제35조", "제36조"],
+    "negative_article_markers": ["단체소송", "실태점검", "영향평가"]
+  }
+]
