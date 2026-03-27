@@ -47,6 +47,7 @@ class AnswerAdapter:
 
     def _build_answer(self, retrieval: RetrievalResult) -> str:
         prefix_lines = self._clarification_notice_lines(retrieval)
+        sanction_articles = self._visible_sanction_articles(retrieval)
         if retrieval.interpretation.query_mode == "framework_overview":
             lines = prefix_lines + ["[결론]", "질문은 관련 법 체계를 함께 보는 유형입니다."]
             if retrieval.framework_axes:
@@ -78,7 +79,7 @@ class AnswerAdapter:
                 for related in retrieval.related_articles:
                     excerpt = _clean(related.get("article_text_excerpt") or related.get("article_text"))
                     lines.append(f"- {related.get('article_no')}: {excerpt}")
-            sanction_lines = self._sanction_notice_lines(retrieval)
+            sanction_lines = self._sanction_notice_lines(sanction_articles)
             if sanction_lines:
                 lines.extend([""] + sanction_lines)
             lines.extend(
@@ -95,6 +96,7 @@ class AnswerAdapter:
         return "\n".join(lines)
 
     def _build_citations(self, retrieval: RetrievalResult) -> Dict[str, Any]:
+        sanction_articles = self._visible_sanction_articles(retrieval)
         primary_law = None
         if retrieval.primary_law:
             primary_law = {
@@ -118,7 +120,7 @@ class AnswerAdapter:
                 "routing_source": retrieval.interpretation.routing_source,
                 "issue_terms": retrieval.interpretation.issue_terms,
                 "matched_policy_ids": retrieval.interpretation.matched_policy_ids,
-                "sanction_articles": retrieval.sanction_articles,
+                "sanction_articles": sanction_articles,
             },
             "review_summary": {
                 "requires_caution": retrieval.interpretation.routing_source != "ollama" or not retrieval.article,
@@ -132,6 +134,7 @@ class AnswerAdapter:
         retrieval: RetrievalResult,
         clarification: Optional[Dict[str, Any]],
     ) -> Dict[str, Any]:
+        sanction_articles = self._visible_sanction_articles(retrieval)
         direct_basis = None
         if retrieval.primary_law and retrieval.article:
             direct_basis = {
@@ -171,7 +174,7 @@ class AnswerAdapter:
             "privacy_processing_question": privacy_processing_question,
             "processing_actions": self._privacy_processing_actions(retrieval.interpretation.issue_terms),
             "privacy_analysis": privacy_analysis,
-            "sanction_reference": retrieval.sanction_articles,
+            "sanction_reference": sanction_articles,
             "clarification": clarification,
         }
 
@@ -213,23 +216,29 @@ class AnswerAdapter:
             related_no = _clean(related.get("article_no"))
             if related_no:
                 checkpoints.append(f"{law_name} {related_no}")
-        for sanction in retrieval.sanction_articles:
+        for sanction in self._visible_sanction_articles(retrieval):
             sanction_no = _clean(sanction.get("article_no"))
             if sanction_no:
                 checkpoints.append(f"{law_name} {sanction_no}")
         return checkpoints
 
     @staticmethod
-    def _sanction_notice_lines(retrieval: RetrievalResult) -> List[str]:
+    def _visible_sanction_articles(retrieval: RetrievalResult) -> List[Dict[str, Any]]:
         if not retrieval.sanction_articles:
             return []
         if retrieval.interpretation.intent != "illegality" and "제재/책임" not in retrieval.interpretation.privacy_categories:
+            return []
+        return retrieval.sanction_articles
+
+    @staticmethod
+    def _sanction_notice_lines(sanction_articles: List[Dict[str, Any]]) -> List[str]:
+        if not sanction_articles:
             return []
         lines = [
             "[제재 참고]",
             "아래 제재 조문은 현재 확인된 직접 관련 조문을 기준으로 연계 검토할 수 있는 참고 규정입니다. 실제 적용 여부와 수위는 행위 유형과 사실관계에 따라 달라질 수 있습니다.",
         ]
-        for sanction in retrieval.sanction_articles[:3]:
+        for sanction in sanction_articles[:3]:
             fallback_label = _clean(sanction.get("article_no"))
             matched_clauses = sanction.get("matched_clauses") or []
             match = matched_clauses[0] if matched_clauses else {}
