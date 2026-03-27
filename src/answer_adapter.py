@@ -78,6 +78,9 @@ class AnswerAdapter:
                 for related in retrieval.related_articles:
                     excerpt = _clean(related.get("article_text_excerpt") or related.get("article_text"))
                     lines.append(f"- {related.get('article_no')}: {excerpt}")
+            sanction_lines = self._sanction_notice_lines(retrieval)
+            if sanction_lines:
+                lines.extend([""] + sanction_lines)
             lines.extend(
                 [
                     "",
@@ -115,6 +118,7 @@ class AnswerAdapter:
                 "routing_source": retrieval.interpretation.routing_source,
                 "issue_terms": retrieval.interpretation.issue_terms,
                 "matched_policy_ids": retrieval.interpretation.matched_policy_ids,
+                "sanction_articles": retrieval.sanction_articles,
             },
             "review_summary": {
                 "requires_caution": retrieval.interpretation.routing_source != "ollama" or not retrieval.article,
@@ -167,6 +171,7 @@ class AnswerAdapter:
             "privacy_processing_question": privacy_processing_question,
             "processing_actions": self._privacy_processing_actions(retrieval.interpretation.issue_terms),
             "privacy_analysis": privacy_analysis,
+            "sanction_reference": retrieval.sanction_articles,
             "clarification": clarification,
         }
 
@@ -208,7 +213,36 @@ class AnswerAdapter:
             related_no = _clean(related.get("article_no"))
             if related_no:
                 checkpoints.append(f"{law_name} {related_no}")
+        for sanction in retrieval.sanction_articles:
+            sanction_no = _clean(sanction.get("article_no"))
+            if sanction_no:
+                checkpoints.append(f"{law_name} {sanction_no}")
         return checkpoints
+
+    @staticmethod
+    def _sanction_notice_lines(retrieval: RetrievalResult) -> List[str]:
+        if not retrieval.sanction_articles:
+            return []
+        if retrieval.interpretation.intent != "illegality" and "제재/책임" not in retrieval.interpretation.privacy_categories:
+            return []
+        lines = [
+            "[제재 참고]",
+            "아래 제재 조문은 현재 확인된 직접 관련 조문을 기준으로 연계 검토할 수 있는 참고 규정입니다. 실제 적용 여부와 수위는 행위 유형과 사실관계에 따라 달라질 수 있습니다.",
+        ]
+        for sanction in retrieval.sanction_articles[:3]:
+            fallback_label = _clean(sanction.get("article_no"))
+            matched_clauses = sanction.get("matched_clauses") or []
+            match = matched_clauses[0] if matched_clauses else {}
+            match_label = _clean(match.get("match_label")) or fallback_label
+            penalty_summary = _clean(match.get("penalty_summary") or sanction.get("penalty_summary"))
+            matched_text = _clean(match.get("matched_text"))
+            if penalty_summary:
+                lines.append(f"- {match_label}: {penalty_summary}")
+            else:
+                lines.append(f"- {match_label}")
+            if matched_text:
+                lines.append(f"  관련 위반유형: {matched_text}")
+        return lines
 
     @staticmethod
     def _clarification_notice_lines(retrieval: RetrievalResult) -> List[str]:

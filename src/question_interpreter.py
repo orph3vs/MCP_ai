@@ -246,7 +246,7 @@ class QuestionInterpreter:
             results.append(DirectBasisCandidate(privacy_law, "제23조", "rules fallback"))
         elif "고유식별정보" in query:
             results.append(DirectBasisCandidate(privacy_law, "제24조", "rules fallback"))
-        elif any(token in query for token in ("제3자 제공", "외부 제공", "공유", "넘겨")):
+        elif any(token in query for token in ("제3자 제공", "제3자에게 제공", "외부 제공", "공유", "넘겨")):
             results.append(DirectBasisCandidate(privacy_law, "제17조", "rules fallback"))
         elif any(token in query for token in ("위탁", "수탁", "처리위탁", "외부 업체에 맡")):
             results.append(DirectBasisCandidate(privacy_law, "제26조", "rules fallback"))

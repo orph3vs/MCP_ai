@@ -21,6 +21,10 @@ class RetrievalPlannerTests(unittest.TestCase):
         self.assertEqual(result.primary_law.law_name, "개인정보 보호법")
         self.assertIsNone(result.article)
 
+    def test_sanction_reference_match_does_not_confuse_article_24_and_24_2(self):
+        self.assertFalse(RetrievalPlanner._references_article("제24조의2제1항을 위반하여 주민등록번호를 처리한 자", "제24조"))
+        self.assertTrue(RetrievalPlanner._references_article("제24조제1항을 위반하여 고유식별정보를 처리한 자", "제24조"))
+
 
 if __name__ == "__main__":
     unittest.main()
