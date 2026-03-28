@@ -139,6 +139,29 @@ class PipelineTests(unittest.TestCase):
         self.assertIsNotNone(result.primary_law)
         self.assertIsNone(result.article)
 
+    def test_sanction_notice_prefers_fine_reference_for_entrustment_penalty_question(self):
+        response = self._pipeline().process(PipelineRequest(user_query="개인정보 처리위탁 계약서를 문서로 하지 않으면 과태료가 있나?"))
+
+        self.assertEqual(response.answer_plan["direct_basis"]["article_no"], "제26조")
+        self.assertIn("[제재 참고]", response.answer)
+        self.assertIn("1천만원 이하의 과태료", response.answer)
+        self.assertEqual(response.answer_plan["sanction_reference"][0]["article_no"], "제75조")
+
+    def test_sanction_notice_includes_criminal_penalty_for_third_party_provision(self):
+        response = self._pipeline().process(PipelineRequest(user_query="동의 없이 개인정보를 제3자에게 제공하면 처벌받나?"))
+
+        self.assertEqual(response.answer_plan["direct_basis"]["article_no"], "제17조")
+        self.assertIn("[제재 참고]", response.answer)
+        self.assertIn("5년 이하의 징역 또는 5천만원 이하의 벌금", response.answer)
+        self.assertEqual(response.answer_plan["sanction_reference"][0]["article_no"], "제71조")
+
+    def test_non_sanction_query_does_not_append_sanction_notice(self):
+        response = self._pipeline().process(PipelineRequest(user_query="개인정보 처리위탁은 어떤 조문이야?"))
+
+        self.assertEqual(response.answer_plan["direct_basis"]["article_no"], "제26조")
+        self.assertNotIn("[제재 참고]", response.answer)
+        self.assertEqual(response.answer_plan["sanction_reference"], [])
+
 
 if __name__ == "__main__":
     unittest.main()

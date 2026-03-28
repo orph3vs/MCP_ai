@@ -71,3 +71,4 @@ class RetrievalResult:
     related_law_queries: List[str]
     version: Optional[Dict[str, Any]]
     precedent: Optional[Dict[str, Any]]
+    sanction_articles: List[Dict[str, Any]]

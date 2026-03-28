@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from typing import Any, Dict, Optional
 
 from src.models import ResolvedLaw
@@ -17,6 +18,33 @@ ECOM_LAW = ResolvedLaw(
     "전자상거래 등에서의 소비자보호에 관한 법률",
     "https://www.law.go.kr/법령/전자상거래등에서의소비자보호에관한법률",
 )
+
+
+def _paragraph(number: str, text: str, items: Optional[list] = None) -> Dict[str, Any]:
+    payload: Dict[str, Any] = {"항내용": text}
+    if number:
+        payload["항번호"] = number
+    if items:
+        payload["호"] = items
+    return payload
+
+
+def _item(number: str, text: str) -> Dict[str, str]:
+    return {"호번호": number, "호내용": text}
+
+
+def _article_source(article_no: str, title: str, heading: str, paragraphs: list) -> Dict[str, Any]:
+    match = re.search(r"제(\d+)조", article_no)
+    article_number = match.group(1) if match else article_no
+    article_unit: Dict[str, Any] = {
+        "조문번호": article_number,
+        "조문여부": "조문",
+        "조문제목": title,
+        "조문내용": heading,
+    }
+    if paragraphs:
+        article_unit["항"] = paragraphs if len(paragraphs) > 1 else paragraphs[0]
+    return {"법령": {"조문": {"조문단위": article_unit}}}
 
 
 class FakeLawGateway:
@@ -43,8 +71,80 @@ class FakeLawGateway:
             (PRIVACY_LAW.law_id, "제36조"): "제36조(개인정보의 정정ㆍ삭제) 정보주체는 자신의 개인정보의 정정 또는 삭제를 요구할 수 있다.",
             (PRIVACY_LAW.law_id, "제37조"): "제37조(개인정보의 처리정지 등) 정보주체는 개인정보처리자에게 처리정지를 요구할 수 있다.",
             (PRIVACY_LAW.law_id, "제58조"): "제58조(적용의 일부 제외) 제25조제1항에 따라 공개된 장소에 고정형 영상정보처리기기를 설치ㆍ운영하여 처리되는 개인정보에 대하여는 제34조를 적용하지 아니한다.",
+            (PRIVACY_LAW.law_id, "제71조"): "제71조(벌칙) 다음 각 호의 어느 하나에 해당하는 자는 5년 이하의 징역 또는 5천만원 이하의 벌금에 처한다.",
+            (PRIVACY_LAW.law_id, "제72조"): "제72조(벌칙) 다음 각 호의 어느 하나에 해당하는 자는 3년 이하의 징역 또는 3천만원 이하의 벌금에 처한다.",
+            (PRIVACY_LAW.law_id, "제75조"): "제75조(과태료)",
             (NETWORK_LAW.law_id, "제50조"): "제50조(영리목적의 광고성 정보 전송 제한) 영리목적의 광고성 정보를 전송하려면 수신자의 사전 동의 등을 갖추어야 한다.",
             (NETWORK_LAW.law_id, "제50조의8"): "제50조의8(수신동의의 철회 등) 수신자는 광고성 정보 수신동의를 철회할 수 있다.",
+        }
+        self.article_sources = {
+            (PRIVACY_LAW.law_id, "제71조"): _article_source(
+                "제71조",
+                "벌칙",
+                "제71조(벌칙) 다음 각 호의 어느 하나에 해당하는 자는 5년 이하의 징역 또는 5천만원 이하의 벌금에 처한다.",
+                [
+                    _paragraph(
+                        "",
+                        "",
+                        [
+                            _item("1.", "제17조제1항제2호에 해당하지 아니함에도 같은 항 제1호를 위반하여 정보주체의 동의를 받지 아니하고 개인정보를 제3자에게 제공한 자"),
+                            _item("2.", "제18조제1항ㆍ제2항 또는 제26조제5항을 위반하여 개인정보를 이용하거나 제3자에게 제공한 자"),
+                        ],
+                    )
+                ],
+            ),
+            (PRIVACY_LAW.law_id, "제72조"): _article_source(
+                "제72조",
+                "벌칙",
+                "제72조(벌칙) 다음 각 호의 어느 하나에 해당하는 자는 3년 이하의 징역 또는 3천만원 이하의 벌금에 처한다.",
+                [
+                    _paragraph(
+                        "",
+                        "",
+                        [
+                            _item("1.", "제25조제5항을 위반하여 고정형 영상정보처리기기의 설치 목적과 다른 목적으로 임의로 조작하거나 녹음기능을 사용한 자"),
+                            _item("2.", "제59조제1호를 위반하여 거짓이나 그 밖의 부정한 수단이나 방법으로 개인정보를 취득한 자"),
+                        ],
+                    )
+                ],
+            ),
+            (PRIVACY_LAW.law_id, "제75조"): _article_source(
+                "제75조",
+                "과태료",
+                "제75조(과태료)",
+                [
+                    _paragraph(
+                        "①",
+                        "① 다음 각 호의 어느 하나에 해당하는 자에게는 5천만원 이하의 과태료를 부과한다.",
+                        [
+                            _item("1.", "제25조제2항을 위반하여 고정형 영상정보처리기기를 설치ㆍ운영한 자"),
+                        ],
+                    ),
+                    _paragraph(
+                        "②",
+                        "② 다음 각 호의 어느 하나에 해당하는 자에게는 3천만원 이하의 과태료를 부과한다.",
+                        [
+                            _item("10.", "제25조제1항을 위반하여 고정형 영상정보처리기기를 설치ㆍ운영한 자"),
+                            _item("12.", "제26조제3항을 위반하여 정보주체에게 알려야 할 사항을 알리지 아니한 자"),
+                        ],
+                    ),
+                    _paragraph(
+                        "③",
+                        "③ 다음 각 호의 어느 하나에 해당하는 자에게는 2천만원 이하의 과태료를 부과한다.",
+                        [
+                            _item("1.", "제26조제6항을 위반하여 위탁자의 동의를 받지 아니하고 제3자에게 다시 위탁한 자"),
+                        ],
+                    ),
+                    _paragraph(
+                        "④",
+                        "④ 다음 각 호의 어느 하나에 해당하는 자에게는 1천만원 이하의 과태료를 부과한다.",
+                        [
+                            _item("4.", "제26조제1항을 위반하여 업무 위탁 시 같은 항 각 호의 내용이 포함된 문서로 하지 아니한 자"),
+                            _item("5.", "제26조제2항을 위반하여 위탁하는 업무의 내용과 수탁자를 공개하지 아니한 자"),
+                        ],
+                    ),
+                ],
+            ),
         }
 
     def resolve_law_family(self, law_family: str) -> Optional[ResolvedLaw]:
@@ -52,6 +152,7 @@ class FakeLawGateway:
 
     def get_article(self, law: ResolvedLaw, article_no: str) -> Dict[str, Any]:
         article_text = self.articles.get((law.law_id, article_no), "")
+        source = self.article_sources.get((law.law_id, article_no))
         return {
             "law_id": law.law_id,
             "law_name": law.law_name,
@@ -60,9 +161,9 @@ class FakeLawGateway:
             "article_text": article_text,
             "article_text_excerpt": article_text[:240],
             "matched_via": "fake",
-            "source": {},
+            "source": source or {},
             "article_link": f"{law.law_link}/{article_no}",
-            "raw": {"article_text": article_text},
+            "raw": {"article_text": article_text, "source": source or {}},
         }
 
     def find_article_by_keywords(self, law: ResolvedLaw, keywords):

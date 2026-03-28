@@ -21,6 +21,31 @@ class RetrievalPlannerTests(unittest.TestCase):
         self.assertEqual(result.primary_law.law_name, "개인정보 보호법")
         self.assertIsNone(result.article)
 
+    def test_planner_uses_injected_privacy_sanction_resolver(self):
+        class StubSanctionResolver:
+            def __init__(self) -> None:
+                self.called_with = None
+
+            def resolve(self, **kwargs):
+                self.called_with = kwargs
+                return [{"article_no": "제75조", "matched_clauses": []}]
+
+        resolver = StubSanctionResolver()
+        planner = RetrievalPlanner(FakeLawGateway(), sanction_resolver=resolver)
+        interpretation = Interpretation(
+            intent="illegality",
+            query_mode="single_basis",
+            candidate_law_families=["개인정보 보호법"],
+            candidate_direct_basis_articles=[DirectBasisCandidate("개인정보 보호법", "제26조", "test")],
+        )
+
+        result = planner.plan(interpretation, "개인정보 처리위탁 계약서를 문서로 하지 않으면 과태료가 있나?")
+
+        self.assertEqual(result.sanction_articles, [{"article_no": "제75조", "matched_clauses": []}])
+        self.assertIsNotNone(resolver.called_with)
+        self.assertEqual(resolver.called_with["user_query"], "개인정보 처리위탁 계약서를 문서로 하지 않으면 과태료가 있나?")
+        self.assertEqual(resolver.called_with["article"]["article_no"], "제26조")
+
 
 if __name__ == "__main__":
     unittest.main()

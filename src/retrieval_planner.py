@@ -5,6 +5,7 @@ from typing import Dict, List, Optional
 
 from .law_gateway import LawGateway
 from .models import Interpretation, ResolvedLaw, RetrievalResult
+from .privacy_sanction_resolver import PrivacySanctionResolver
 
 
 def _unique_by_article(items: List[Dict[str, object]]) -> List[Dict[str, object]]:
@@ -18,10 +19,14 @@ def _unique_by_article(items: List[Dict[str, object]]) -> List[Dict[str, object]
         ordered.append(item)
     return ordered
 
-
 class RetrievalPlanner:
-    def __init__(self, law_gateway: LawGateway) -> None:
+    def __init__(
+        self,
+        law_gateway: LawGateway,
+        sanction_resolver: Optional[PrivacySanctionResolver] = None,
+    ) -> None:
         self.law_gateway = law_gateway
+        self.sanction_resolver = sanction_resolver or PrivacySanctionResolver(law_gateway)
 
     def plan(self, interpretation: Interpretation, user_query: str) -> RetrievalResult:
         resolved_cache: Dict[str, ResolvedLaw] = {}
@@ -44,6 +49,12 @@ class RetrievalPlanner:
                 primary_law=primary_law,
                 article=article,
             )
+        sanction_articles = self.sanction_resolver.resolve(
+            interpretation=interpretation,
+            primary_law=primary_law,
+            article=article,
+            user_query=user_query,
+        )
 
         framework_axes = self._resolve_framework_axes(interpretation, resolved_cache)
         return RetrievalResult(
@@ -57,6 +68,7 @@ class RetrievalPlanner:
             related_law_queries=list(interpretation.candidate_law_families),
             version=version,
             precedent=None,
+            sanction_articles=sanction_articles,
         )
 
     def _safe_get_version(self, primary_law: Optional[ResolvedLaw]) -> Optional[Dict[str, object]]:
